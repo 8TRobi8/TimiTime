@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "timitime-1a1VsH",
+    "slug": "timitime-1a1VsH",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "timitime-1a1vsh",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.successrobi.timitime1a1VsH"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.successrobi.timitime1a1VsH"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cbcf1705-c5d9-4e74-8fd0-0178b88d3db3"
+      }
+    },
+    "owner": "successrobi",
+    "updates": {
+      "url": "https://u.expo.dev/cbcf1705-c5d9-4e74-8fd0-0178b88d3db3"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}
