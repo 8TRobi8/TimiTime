@@ -1,107 +1,607 @@
-import { Image } from "expo-image";
-import { Platform, StyleSheet } from "react-native";
+import { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Modal,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/constants/theme';
+import { taskService } from '@/lib/task-service';
+import type { Task, TaskInsert } from '@/lib/types';
 
-import { HelloWave } from "@/components/hello-wave";
-import ParallaxScrollView from "@/components/parallax-scroll-view";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { Link } from "expo-router";
+export default function TasksScreen() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterDuration, setFilterDuration] = useState('');
+  const [isFiltered, setIsFiltered] = useState(false);
+  
+  // Form state
+  const [title, setTitle] = useState('');
+  const [duration, setDuration] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [flexibility, setFlexibility] = useState<number>(0);
 
-export default function HomeScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const data = await taskService.getTasks();
+      setTasks(data);
+      setIsFiltered(false);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFilterByDuration = async () => {
+    const minutes = parseInt(filterDuration);
+    if (isNaN(minutes) || minutes <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration in minutes');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await taskService.getTasksByDuration(minutes);
+      setTasks(data);
+      setIsFiltered(true);
+      setFilterModalVisible(false);
+      setFilterDuration('');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to filter tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!title || !duration || !dueDate) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const durationNum = parseInt(duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration in minutes');
+      return;
+    }
+
+    try {
+      const newTask: TaskInsert = {
+        title,
+        duration: durationNum,
+        due_date: dueDate,
+        flexibility,
+        completed: false,
+      };
+
+      await taskService.createTask(newTask);
+      setModalVisible(false);
+      resetForm();
+      loadTasks();
+      Alert.alert('Success', 'Task created successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create task');
+    }
+  };
+
+  const handleToggleComplete = async (task: Task) => {
+    try {
+      await taskService.toggleTaskComplete(task.id, !task.completed);
+      loadTasks();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update task');
+    }
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setDuration('');
+    setDueDate('');
+    setFlexibility(0);
+  };
+
+  const getTaskUrgencyColor = (task: Task) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
+    const dueDate = new Date(task.due_date);
+    dueDate.setHours(0, 0, 0, 0); // Start of due date
+    
+    const flexibilityEndDate = new Date(dueDate);
+    flexibilityEndDate.setDate(flexibilityEndDate.getDate() + task.flexibility);
+    
+    // Green: due date is in the future
+    if (dueDate > today) {
+      return '#34c759'; // Green
+    }
+    
+    // Yellow: due date is today with no flexibility OR due date is past but within flexibility
+    if (dueDate.getTime() === today.getTime() && task.flexibility === 0) {
+      return '#ff9500'; // Yellow
+    }
+    
+    if (dueDate < today && flexibilityEndDate >= today) {
+      return '#ff9500'; // Yellow
+    }
+    
+    // Red: due date + flexibility is in the past
+    return '#ff3b30'; // Red
+  };
+
+  const renderTask = ({ item }: { item: Task }) => {
+    const urgencyColor = getTaskUrgencyColor(item);
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.taskCard,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
+            borderColor: colors.border,
+            borderLeftWidth: 4,
+            borderLeftColor: urgencyColor,
+          },
+          item.completed && styles.taskCompleted,
+        ]}
+        onPress={() => handleToggleComplete(item)}
+      >
+        <View style={styles.taskHeader}>
+          <ThemedText
+            type="defaultSemiBold"
+            style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}
+          >
+            {item.title}
+          </ThemedText>
+          <View style={[styles.flexibilityBadge, { backgroundColor: urgencyColor }]}>
+            <ThemedText style={styles.flexibilityText}>
+              {item.flexibility === 0 ? 'No flex' : `+${item.flexibility}d`}
+            </ThemedText>
+          </View>
+        </View>
+        <View style={styles.taskDetails}>
+          <ThemedText style={styles.taskDetail}>⏱️ {item.duration} min</ThemedText>
+          <ThemedText style={styles.taskDetail}>
+            📅 {new Date(item.due_date).toLocaleDateString()}
+          </ThemedText>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
-      headerImage={
-        <Image
-          source={require("@/assets/images/partial-react-logo.png")}
-          style={styles.reactLogo}
-        />
-      }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Haliho!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText>{" "}
-          to see changes. Press{" "}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: "cmd + d",
-              android: "cmd + m",
-              web: "F12",
-            })}
-          </ThemedText>{" "}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction
-              title="Action"
-              icon="cube"
-              onPress={() => alert("Action pressed")}
-            />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert("Share pressed")}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert("Delete pressed")}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ThemedView style={styles.container}>
+      <View style={styles.header}>
+        <ThemedText type="title">Tasks</ThemedText>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: colors.tint }]}
+            onPress={() => setFilterModalVisible(true)}
+          >
+            <ThemedText style={styles.headerButtonText}>🔍 Find Tasks</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: colors.tint }]}
+            onPress={() => setModalVisible(true)}
+          >
+            <ThemedText style={styles.headerButtonText}>+ Add</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">
-            npm run reset-project
-          </ThemedText>{" "}
-          to get a fresh <ThemedText type="defaultSemiBold">app</ThemedText>{" "}
-          directory. This will move the current{" "}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{" "}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {isFiltered && (
+        <TouchableOpacity
+          style={[styles.filterBanner, { backgroundColor: colors.tint }]}
+          onPress={loadTasks}
+        >
+          <ThemedText style={styles.filterBannerText}>
+            Showing filtered tasks · Tap to show all
+          </ThemedText>
+        </TouchableOpacity>
+      )}
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </View>
+      ) : (
+        <FlatList
+          data={tasks}
+          renderItem={renderTask}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <ThemedText style={styles.emptyText}>
+                No tasks yet. Tap &quot;Add&quot; to create one!
+              </ThemedText>
+            </View>
+          }
+        />
+      )}
+
+      {/* Create Task Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#fff' }]}>
+            <ScrollView>
+              <ThemedText type="subtitle" style={styles.modalTitle}>
+                Create New Task
+              </ThemedText>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Task title"
+                placeholderTextColor={colors.textSecondary}
+                value={title}
+                onChangeText={setTitle}
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Duration (minutes)"
+                placeholderTextColor={colors.textSecondary}
+                value={duration}
+                onChangeText={setDuration}
+                keyboardType="numeric"
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Due date (YYYY-MM-DD)"
+                placeholderTextColor={colors.textSecondary}
+                value={dueDate}
+                onChangeText={setDueDate}
+              />
+
+              <ThemedText style={styles.label}>Flexibility (days):</ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Days the task can be delayed (e.g., 0, 1, 2, 3)"
+                placeholderTextColor={colors.textSecondary}
+                value={flexibility.toString()}
+                onChangeText={(text) => setFlexibility(parseInt(text) || 0)}
+                keyboardType="numeric"
+              />
+
+              <View style={styles.quickFlexButtons}>
+                {[0, 1, 2, 3, 7].map((days) => (
+                  <TouchableOpacity
+                    key={days}
+                    style={[styles.quickFlexButton, { borderColor: colors.tint }]}
+                    onPress={() => setFlexibility(days)}
+                  >
+                    <ThemedText style={{ color: colors.tint }}>
+                      {days === 0 ? 'No flex' : `${days}d`}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setModalVisible(false);
+                    resetForm();
+                  }}
+                >
+                  <ThemedText>Cancel</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: colors.tint }]}
+                  onPress={handleCreateTask}
+                >
+                  <ThemedText style={styles.modalButtonText}>Create</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#fff' }]}>
+            <ThemedText type="subtitle" style={styles.modalTitle}>
+              I have free time...
+            </ThemedText>
+
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              placeholder="Enter duration in minutes (e.g., 15)"
+              placeholderTextColor={colors.textSecondary}
+              value={filterDuration}
+              onChangeText={setFilterDuration}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.quickFilters}>
+              {[5, 10, 15, 30, 60].map((min) => (
+                <TouchableOpacity
+                  key={min}
+                  style={[styles.quickFilterButton, { borderColor: colors.tint }]}
+                  onPress={() => setFilterDuration(min.toString())}
+                >
+                  <ThemedText style={{ color: colors.tint }}>{min} min</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setFilterModalVisible(false);
+                  setFilterDuration('');
+                }}
+              >
+                <ThemedText>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.tint }]}
+                onPress={handleFilterByDuration}
+              >
+                <ThemedText style={styles.modalButtonText}>Find Tasks</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
+  header: {
+    padding: 16,
+    paddingTop: 60,
+  },
+  headerButtons: {
+    flexDirection: 'row',
     gap: 8,
+    marginTop: 12,
+  },
+  headerButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  headerButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  filterBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  filterBannerText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  taskCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  taskCompleted: {
+    opacity: 0.6,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: "absolute",
+  taskTitle: {
+    flex: 1,
+    marginRight: 8,
+  },
+  taskTitleCompleted: {
+    textDecorationLine: 'line-through',
+  },
+  flexibilityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  flexibilityText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#fff',
+    textTransform: 'uppercase',
+  },
+  taskDetails: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  taskDetail: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    textAlign: 'center',
+    opacity: 0.6,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '90%',
+  },
+  modalTitle: {
+    marginBottom: 20,
+  },
+  input: {
+    height: 50,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  label: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  quickFlexButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  quickFlexButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  flexibilityButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  flexibilityButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#8e8e93',
+    alignItems: 'center',
+  },
+  flexibilityButtonActive: {
+    borderWidth: 0,
+  },
+  flexibilityButtonText: {
+    fontSize: 14,
+  },
+  flexibilityButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  quickFilters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  quickFilterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#8e8e93',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
+

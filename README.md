@@ -1,23 +1,145 @@
-# Welcome to your Expo app 👋
+# TimiTime - Task Management for Busy People ⏰
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile application designed to help users with limited free time maximize their productivity by matching available time slots with suitable tasks.
 
-## Get started
+## Features
 
-To start the app, in your terminal run:
+- 🔐 **Secure Authentication**: Email/password login with Supabase Auth
+- ✅ **Task Management**: Create, view, update, and complete tasks
+- ⏱️ **Smart Time Filtering**: Find tasks that fit your available time ("I have 15 minutes free")
+- 📅 **Task Organization**: Sort tasks by due date with flexibility indicators
+- 🎨 **Beautiful UI**: Clean, intuitive interface with dark mode support
+- 🔄 **Real-time Sync**: Powered by Supabase for instant updates
 
-```bash
-npm run start
+## Task Properties
+
+Each task includes:
+- **Title**: What needs to be done
+- **Duration**: How long it takes (in minutes)
+- **Due Date**: When it needs to be completed
+- **Flexibility**: How many days the task can be delayed (e.g., 0, 1, 2, 3 days)
+- **Completion Status**: Track progress
+
+### Task Color Coding
+
+Tasks are color-coded based on urgency:
+- 🟢 **Green**: Due date is in the future
+- 🟡 **Yellow**: Due date is today (no flexibility) OR past due but within flexibility window
+- 🔴 **Red**: Past due date + flexibility days
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- [Expo CLI](https://docs.expo.dev/get-started/installation/)
+- A Supabase account and project
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/8TRobi8/TimiTime.git
+   cd TimiTime
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up Supabase**
+   
+   Follow the detailed instructions in [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) to:
+   - Create your Supabase project
+   - Set up the database schema
+   - Configure authentication
+   - Get your API keys
+
+4. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and add your Supabase credentials:
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=your-supabase-url
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+5. **Start the development server**
+   ```bash
+   npm start
+   ```
+
+   You can then:
+   - Press `i` to open iOS simulator
+   - Press `a` to open Android emulator
+   - Scan the QR code with Expo Go app on your phone
+
+## Project Structure
+
+```
+TimiTime/
+├── app/                      # Expo Router screens
+│   ├── (tabs)/              # Tab navigation screens
+│   │   ├── index.tsx        # Tasks screen
+│   │   ├── calendar.tsx     # Calendar (coming soon)
+│   │   └── settings.tsx     # Settings & logout
+│   ├── _layout.tsx          # Root layout with auth routing
+│   └── login.tsx            # Authentication screen
+├── lib/                     # Core services
+│   ├── supabase.ts          # Supabase client config
+│   ├── task-service.ts      # Task CRUD operations
+│   └── types.ts             # TypeScript definitions
+├── contexts/                # React contexts
+│   └── auth-context.tsx     # Authentication state
+├── components/              # Reusable UI components
+├── constants/               # Theme and styling
+└── SUPABASE_SETUP.md       # Database setup guide
 ```
 
-In the output, you'll find options to open the app in:
+## Usage
 
-- [a development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [an Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [an iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Creating a Task
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. Tap the **"+ Add"** button in the Tasks tab
+2. Fill in the task details:
+   - Title (e.g., "Wash bedding")
+   - Duration in minutes (e.g., 20)
+   - Due date (YYYY-MM-DD format, e.g., next Sunday)
+   - Flexibility in days (e.g., 2 - means task can be done up to 2 days after due date)
+3. Tap **"Create"**
+
+**Example**: A task with due date Sunday and flexibility of 2 days can be completed by Tuesday.
+
+### Understanding Task Colors
+
+Tasks are automatically color-coded:
+- 🟢 **Green border**: Due date is in the future - no rush!
+- 🟡 **Yellow border**: Due today without flexibility OR overdue but still within flexibility window
+- 🔴 **Red border**: Overdue beyond flexibility period - urgent!
+
+### Finding Tasks by Available Time
+
+1. Tap the **"🔍 Find Tasks"** button
+2. Enter how many minutes you have available
+3. Or use quick filters: 5, 10, 15, 30, or 60 minutes
+4. See all tasks that fit within that time, sorted by due date
+
+### Completing Tasks
+
+- Simply tap any task to toggle its completion status
+- Completed tasks appear with a strikethrough and reduced opacity
+
+## Technology Stack
+
+- **Framework**: [Expo](https://expo.dev) with React Native
+- **Language**: TypeScript
+- **Backend**: [Supabase](https://supabase.com) (Auth, Database, Storage)
+- **Navigation**: Expo Router with file-based routing
+- **UI**: React Native components with custom theming
+- **State Management**: React Context API
 
 ## Workflows
 
