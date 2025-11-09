@@ -3,7 +3,7 @@ export interface Task {
   title: string;
   duration: number; // in minutes
   due_date: string; // ISO date string
-  flexibility: 'low' | 'medium' | 'high';
+  flexibility: number; // in days - how many days the task can be delayed
   completed: boolean;
   user_id: string;
   created_at: string;
@@ -14,7 +14,7 @@ export interface TaskInsert {
   title: string;
   duration: number;
   due_date: string;
-  flexibility: 'low' | 'medium' | 'high';
+  flexibility: number; // in days
   completed?: boolean;
 }
 
@@ -22,6 +22,6 @@ export interface TaskUpdate {
   title?: string;
   duration?: number;
   due_date?: string;
-  flexibility?: 'low' | 'medium' | 'high';
+  flexibility?: number; // in days
   completed?: boolean;
 }

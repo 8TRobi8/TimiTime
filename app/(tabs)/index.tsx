@@ -29,7 +29,7 @@ export default function TasksScreen() {
   const [title, setTitle] = useState('');
   const [duration, setDuration] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [flexibility, setFlexibility] = useState<'low' | 'medium' | 'high'>('medium');
+  const [flexibility, setFlexibility] = useState<number>(0);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -116,52 +116,75 @@ export default function TasksScreen() {
     setTitle('');
     setDuration('');
     setDueDate('');
-    setFlexibility('medium');
+    setFlexibility(0);
   };
 
-  const renderTask = ({ item }: { item: Task }) => (
-    <TouchableOpacity
-      style={[
-        styles.taskCard,
-        {
-          backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
-          borderColor: colors.border,
-        },
-        item.completed && styles.taskCompleted,
-      ]}
-      onPress={() => handleToggleComplete(item)}
-    >
-      <View style={styles.taskHeader}>
-        <ThemedText
-          type="defaultSemiBold"
-          style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}
-        >
-          {item.title}
-        </ThemedText>
-        <View style={[styles.flexibilityBadge, { backgroundColor: getFlexibilityColor(item.flexibility) }]}>
-          <ThemedText style={styles.flexibilityText}>{item.flexibility}</ThemedText>
-        </View>
-      </View>
-      <View style={styles.taskDetails}>
-        <ThemedText style={styles.taskDetail}>⏱️ {item.duration} min</ThemedText>
-        <ThemedText style={styles.taskDetail}>
-          📅 {new Date(item.due_date).toLocaleDateString()}
-        </ThemedText>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const getFlexibilityColor = (flex: string) => {
-    switch (flex) {
-      case 'low':
-        return '#ff3b30';
-      case 'medium':
-        return '#ff9500';
-      case 'high':
-        return '#34c759';
-      default:
-        return '#8e8e93';
+  const getTaskUrgencyColor = (task: Task) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
+    const dueDate = new Date(task.due_date);
+    dueDate.setHours(0, 0, 0, 0); // Start of due date
+    
+    const flexibilityEndDate = new Date(dueDate);
+    flexibilityEndDate.setDate(flexibilityEndDate.getDate() + task.flexibility);
+    
+    // Green: due date is in the future
+    if (dueDate > today) {
+      return '#34c759'; // Green
     }
+    
+    // Yellow: due date is today with no flexibility OR due date is past but within flexibility
+    if (dueDate.getTime() === today.getTime() && task.flexibility === 0) {
+      return '#ff9500'; // Yellow
+    }
+    
+    if (dueDate < today && flexibilityEndDate >= today) {
+      return '#ff9500'; // Yellow
+    }
+    
+    // Red: due date + flexibility is in the past
+    return '#ff3b30'; // Red
+  };
+
+  const renderTask = ({ item }: { item: Task }) => {
+    const urgencyColor = getTaskUrgencyColor(item);
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.taskCard,
+          {
+            backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
+            borderColor: colors.border,
+            borderLeftWidth: 4,
+            borderLeftColor: urgencyColor,
+          },
+          item.completed && styles.taskCompleted,
+        ]}
+        onPress={() => handleToggleComplete(item)}
+      >
+        <View style={styles.taskHeader}>
+          <ThemedText
+            type="defaultSemiBold"
+            style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}
+          >
+            {item.title}
+          </ThemedText>
+          <View style={[styles.flexibilityBadge, { backgroundColor: urgencyColor }]}>
+            <ThemedText style={styles.flexibilityText}>
+              {item.flexibility === 0 ? 'No flex' : `+${item.flexibility}d`}
+            </ThemedText>
+          </View>
+        </View>
+        <View style={styles.taskDetails}>
+          <ThemedText style={styles.taskDetail}>⏱️ {item.duration} min</ThemedText>
+          <ThemedText style={styles.taskDetail}>
+            📅 {new Date(item.due_date).toLocaleDateString()}
+          </ThemedText>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -275,24 +298,32 @@ export default function TasksScreen() {
                 onChangeText={setDueDate}
               />
 
-              <ThemedText style={styles.label}>Flexibility:</ThemedText>
-              <View style={styles.flexibilityButtons}>
-                {(['low', 'medium', 'high'] as const).map((flex) => (
+              <ThemedText style={styles.label}>Flexibility (days):</ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Days the task can be delayed (e.g., 0, 1, 2, 3)"
+                placeholderTextColor={colors.textSecondary}
+                value={flexibility.toString()}
+                onChangeText={(text) => setFlexibility(parseInt(text) || 0)}
+                keyboardType="numeric"
+              />
+
+              <View style={styles.quickFlexButtons}>
+                {[0, 1, 2, 3, 7].map((days) => (
                   <TouchableOpacity
-                    key={flex}
-                    style={[
-                      styles.flexibilityButton,
-                      flexibility === flex && [styles.flexibilityButtonActive, { backgroundColor: colors.tint }],
-                    ]}
-                    onPress={() => setFlexibility(flex)}
+                    key={days}
+                    style={[styles.quickFlexButton, { borderColor: colors.tint }]}
+                    onPress={() => setFlexibility(days)}
                   >
-                    <ThemedText
-                      style={[
-                        styles.flexibilityButtonText,
-                        flexibility === flex && styles.flexibilityButtonTextActive,
-                      ]}
-                    >
-                      {flex.charAt(0).toUpperCase() + flex.slice(1)}
+                    <ThemedText style={{ color: colors.tint }}>
+                      {days === 0 ? 'No flex' : `${days}d`}
                     </ThemedText>
                   </TouchableOpacity>
                 ))}
@@ -506,6 +537,18 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 8,
     marginTop: 4,
+  },
+  quickFlexButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  quickFlexButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   flexibilityButtons: {
     flexDirection: 'row',

@@ -17,8 +17,15 @@ Each task includes:
 - **Title**: What needs to be done
 - **Duration**: How long it takes (in minutes)
 - **Due Date**: When it needs to be completed
-- **Flexibility**: Priority level (low, medium, high)
+- **Flexibility**: How many days the task can be delayed (e.g., 0, 1, 2, 3 days)
 - **Completion Status**: Track progress
+
+### Task Color Coding
+
+Tasks are color-coded based on urgency:
+- 🟢 **Green**: Due date is in the future
+- 🟡 **Yellow**: Due date is today (no flexibility) OR past due but within flexibility window
+- 🔴 **Red**: Past due date + flexibility days
 
 ## Quick Start
 
@@ -98,11 +105,20 @@ TimiTime/
 
 1. Tap the **"+ Add"** button in the Tasks tab
 2. Fill in the task details:
-   - Title (e.g., "Review pull requests")
+   - Title (e.g., "Wash bedding")
    - Duration in minutes (e.g., 20)
-   - Due date (YYYY-MM-DD format)
-   - Flexibility level (low/medium/high)
+   - Due date (YYYY-MM-DD format, e.g., next Sunday)
+   - Flexibility in days (e.g., 2 - means task can be done up to 2 days after due date)
 3. Tap **"Create"**
+
+**Example**: A task with due date Sunday and flexibility of 2 days can be completed by Tuesday.
+
+### Understanding Task Colors
+
+Tasks are automatically color-coded:
+- 🟢 **Green border**: Due date is in the future - no rush!
+- 🟡 **Yellow border**: Due today without flexibility OR overdue but still within flexibility window
+- 🔴 **Red border**: Overdue beyond flexibility period - urgent!
 
 ### Finding Tasks by Available Time
 

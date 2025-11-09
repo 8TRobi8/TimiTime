@@ -26,7 +26,7 @@ create table tasks (
   title text not null,
   duration integer not null, -- duration in minutes
   due_date timestamp with time zone not null,
-  flexibility text not null check (flexibility in ('low', 'medium', 'high')),
+  flexibility integer not null default 0, -- days the task can be delayed
   completed boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -108,7 +108,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 | title | text | Task title |
 | duration | integer | Duration in minutes |
 | due_date | timestamp | When the task is due |
-| flexibility | text | 'low', 'medium', or 'high' |
+| flexibility | integer | Days the task can be delayed (e.g., 0, 1, 2, 3) |
 | completed | boolean | Whether the task is completed |
 | created_at | timestamp | When the task was created |
 | updated_at | timestamp | When the task was last updated |

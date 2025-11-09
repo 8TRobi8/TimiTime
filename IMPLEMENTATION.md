@@ -87,10 +87,10 @@ Successfully implemented a complete Supabase-integrated task management mobile a
   - Modern, clean interface
   - Rounded corners (12px radius)
   - Proper spacing and padding
-  - Color-coded flexibility badges:
-    - Red (#ff3b30) for low flexibility
-    - Orange (#ff9500) for medium flexibility
-    - Green (#34c759) for high flexibility
+  - Color-coded urgency indicators:
+    - Green (#34c759) for tasks with future due dates
+    - Yellow (#ff9500) for tasks due today or overdue within flexibility
+    - Red (#ff3b30) for tasks overdue beyond flexibility
   - Modal overlays
   - Form inputs with proper styling
   - Button states (normal, active, disabled)
@@ -127,7 +127,7 @@ Successfully implemented a complete Supabase-integrated task management mobile a
    - Protected routes
 
 2. ✅ **Task Management**
-   - Create tasks with title, duration, due date, and flexibility
+   - Create tasks with title, duration, due date, and flexibility (in days)
    - View all tasks sorted by due date
    - Filter tasks by available time
    - Toggle task completion
