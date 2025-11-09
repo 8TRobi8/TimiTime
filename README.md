@@ -6,6 +6,7 @@ A mobile application designed to help users with limited free time maximize thei
 
 - 🔐 **Secure Authentication**: Email/password login with Supabase Auth
 - ✅ **Task Management**: Create, view, update, and complete tasks
+- 🔁 **Recurring Tasks**: Automatically generate repeating tasks (daily, weekly, monthly, yearly)
 - ⏱️ **Smart Time Filtering**: Find tasks that fit your available time ("I have 15 minutes free")
 - 📅 **Task Organization**: Sort tasks by due date with flexibility indicators
 - 🎨 **Beautiful UI**: Clean, intuitive interface with dark mode support
@@ -19,6 +20,7 @@ Each task includes:
 - **Due Date**: When it needs to be completed
 - **Flexibility**: How many days the task can be delayed (e.g., 0, 1, 2, 3 days)
 - **Completion Status**: Track progress
+- **Recurring**: Optional repeating pattern (daily, weekly, monthly, yearly) with customizable interval and end date
 
 ### Task Color Coding
 
