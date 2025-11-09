@@ -122,6 +122,8 @@ When you save a recurring task:
 - Instances are linked to the parent task via `parent_task_id`
 - Instances are created up to the end date or 1 year, whichever comes first
 
+**Important**: When viewing your task list, only the next upcoming instance for each recurring series is shown. This prevents your list from being cluttered with dozens of future tasks. As you complete tasks, the next instance in the series automatically appears.
+
 ### Example
 
 Create a task "Daily Standup" with:
@@ -129,7 +131,7 @@ Create a task "Daily Standup" with:
 - Interval: 1 (every day)
 - End date: 30 days from now
 
-Result: 30 task instances will be created, one for each day.
+Result: 30 task instances will be created, one for each day. However, you'll only see today's standup in your task list. After completing it, tomorrow's standup will automatically appear.
 
 ## Database Schema
 

@@ -32,6 +32,7 @@ function getNextDueDate(
 export const taskService = {
   /**
    * Get all tasks for the current user
+   * For recurring tasks, only returns the next upcoming instance
    */
   async getTasks(): Promise<Task[]> {
     const { data, error } = await supabase
@@ -40,11 +41,14 @@ export const taskService = {
       .order('due_date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    
+    // Filter to show only the first upcoming instance for each recurring series
+    return this.filterRecurringTasks(data || []);
   },
 
   /**
    * Get tasks that fit within a given time duration
+   * For recurring tasks, only returns the next upcoming instance
    * @param maxDuration - Maximum duration in minutes
    */
   async getTasksByDuration(maxDuration: number): Promise<Task[]> {
@@ -56,7 +60,51 @@ export const taskService = {
       .order('due_date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    
+    // Filter to show only the first upcoming instance for each recurring series
+    return this.filterRecurringTasks(data || []);
+  },
+
+  /**
+   * Filter tasks to show only the first upcoming instance for each recurring series
+   * @param tasks - All tasks from the database
+   * @returns Filtered list with only the next upcoming task for each recurring series
+   */
+  filterRecurringTasks(tasks: Task[]): Task[] {
+    const now = new Date();
+    const result: Task[] = [];
+    const seenRecurringSeries = new Set<string>();
+
+    for (const task of tasks) {
+      // Determine the series identifier
+      const seriesId = task.parent_task_id || (task.is_recurring ? task.id : null);
+      
+      if (!seriesId) {
+        // Non-recurring task (no parent and not marked as recurring)
+        result.push(task);
+      } else {
+        // Part of a recurring series
+        if (!seenRecurringSeries.has(seriesId)) {
+          // Find all tasks in this series (including the parent if it exists)
+          const seriesTasks = tasks.filter(t => 
+            t.id === seriesId || t.parent_task_id === seriesId
+          );
+          
+          // Find the next upcoming uncompleted task in this series
+          const upcomingTask = seriesTasks
+            .filter(t => !t.completed && new Date(t.due_date) >= now)
+            .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
+          
+          if (upcomingTask) {
+            result.push(upcomingTask);
+          }
+          
+          seenRecurringSeries.add(seriesId);
+        }
+      }
+    }
+
+    return result;
   },
 
   /**
