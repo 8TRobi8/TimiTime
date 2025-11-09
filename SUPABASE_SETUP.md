@@ -28,6 +28,11 @@ create table tasks (
   due_date timestamp with time zone not null,
   flexibility integer not null default 0, -- days the task can be delayed
   completed boolean default false,
+  is_recurring boolean default false, -- whether the task repeats
+  recurrence_pattern text, -- daily, weekly, monthly, yearly
+  recurrence_interval integer default 1, -- every X days/weeks/months/years
+  recurrence_end_date timestamp with time zone, -- optional end date for recurring tasks
+  parent_task_id uuid references tasks(id), -- reference to the original recurring task
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -56,6 +61,8 @@ create policy "Users can delete their own tasks"
 create index tasks_user_id_idx on tasks(user_id);
 create index tasks_due_date_idx on tasks(due_date);
 create index tasks_duration_idx on tasks(duration);
+create index tasks_parent_task_id_idx on tasks(parent_task_id);
+create index tasks_is_recurring_idx on tasks(is_recurring);
 
 -- Create function to automatically update updated_at
 create or replace function update_updated_at_column()
@@ -110,6 +117,11 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 | due_date | timestamp | When the task is due |
 | flexibility | integer | Days the task can be delayed (e.g., 0, 1, 2, 3) |
 | completed | boolean | Whether the task is completed |
+| is_recurring | boolean | Whether the task repeats |
+| recurrence_pattern | text | Frequency: 'daily', 'weekly', 'monthly', 'yearly' |
+| recurrence_interval | integer | Every X days/weeks/months/years (default: 1) |
+| recurrence_end_date | timestamp | Optional end date for recurring tasks |
+| parent_task_id | uuid | Reference to the original recurring task (for instances) |
 | created_at | timestamp | When the task was created |
 | updated_at | timestamp | When the task was last updated |
 

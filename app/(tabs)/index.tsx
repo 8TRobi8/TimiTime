@@ -9,13 +9,14 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { taskService } from '@/lib/task-service';
-import type { Task, TaskInsert } from '@/lib/types';
+import type { Task, TaskInsert, RecurrencePattern } from '@/lib/types';
 
 export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -30,6 +31,10 @@ export default function TasksScreen() {
   const [duration, setDuration] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [flexibility, setFlexibility] = useState<number>(0);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>('daily');
+  const [recurrenceInterval, setRecurrenceInterval] = useState('1');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -84,6 +89,15 @@ export default function TasksScreen() {
       return;
     }
 
+    // Validate recurring task fields if recurring is enabled
+    if (isRecurring) {
+      const intervalNum = parseInt(recurrenceInterval);
+      if (isNaN(intervalNum) || intervalNum <= 0) {
+        Alert.alert('Error', 'Please enter a valid recurrence interval');
+        return;
+      }
+    }
+
     try {
       const newTask: TaskInsert = {
         title,
@@ -91,13 +105,23 @@ export default function TasksScreen() {
         due_date: dueDate,
         flexibility,
         completed: false,
+        is_recurring: isRecurring,
       };
+
+      // Add recurring fields if enabled
+      if (isRecurring) {
+        newTask.recurrence_pattern = recurrencePattern;
+        newTask.recurrence_interval = parseInt(recurrenceInterval);
+        if (recurrenceEndDate) {
+          newTask.recurrence_end_date = recurrenceEndDate;
+        }
+      }
 
       await taskService.createTask(newTask);
       setModalVisible(false);
       resetForm();
       loadTasks();
-      Alert.alert('Success', 'Task created successfully');
+      Alert.alert('Success', isRecurring ? 'Recurring task created successfully' : 'Task created successfully');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create task');
     }
@@ -117,6 +141,10 @@ export default function TasksScreen() {
     setDuration('');
     setDueDate('');
     setFlexibility(0);
+    setIsRecurring(false);
+    setRecurrencePattern('daily');
+    setRecurrenceInterval('1');
+    setRecurrenceEndDate('');
   };
 
   const getTaskUrgencyColor = (task: Task) => {
@@ -171,10 +199,17 @@ export default function TasksScreen() {
           >
             {item.title}
           </ThemedText>
-          <View style={[styles.flexibilityBadge, { backgroundColor: urgencyColor }]}>
-            <ThemedText style={styles.flexibilityText}>
-              {item.flexibility === 0 ? 'No flex' : `+${item.flexibility}d`}
-            </ThemedText>
+          <View style={styles.badgeContainer}>
+            {item.is_recurring && (
+              <View style={[styles.recurringBadge, { backgroundColor: colors.tint }]}>
+                <ThemedText style={styles.recurringText}>🔁</ThemedText>
+              </View>
+            )}
+            <View style={[styles.flexibilityBadge, { backgroundColor: urgencyColor }]}>
+              <ThemedText style={styles.flexibilityText}>
+                {item.flexibility === 0 ? 'No flex' : `+${item.flexibility}d`}
+              </ThemedText>
+            </View>
           </View>
         </View>
         <View style={styles.taskDetails}>
@@ -182,6 +217,11 @@ export default function TasksScreen() {
           <ThemedText style={styles.taskDetail}>
             📅 {new Date(item.due_date).toLocaleDateString()}
           </ThemedText>
+          {item.is_recurring && item.recurrence_pattern && (
+            <ThemedText style={styles.taskDetail}>
+              🔁 {item.recurrence_pattern}
+            </ThemedText>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -327,6 +367,78 @@ export default function TasksScreen() {
                     </ThemedText>
                   </TouchableOpacity>
                 ))}
+              </View>
+
+              {/* Recurring Task Section */}
+              <View style={styles.recurringSection}>
+                <View style={styles.switchContainer}>
+                  <ThemedText style={styles.label}>Recurring Task:</ThemedText>
+                  <Switch
+                    value={isRecurring}
+                    onValueChange={setIsRecurring}
+                    trackColor={{ false: '#767577', true: colors.tint }}
+                    thumbColor={isRecurring ? '#fff' : '#f4f3f4'}
+                  />
+                </View>
+
+                {isRecurring && (
+                  <>
+                    <ThemedText style={styles.label}>Recurrence Pattern:</ThemedText>
+                    <View style={styles.recurrenceButtons}>
+                      {(['daily', 'weekly', 'monthly', 'yearly'] as RecurrencePattern[]).map((pattern) => (
+                        <TouchableOpacity
+                          key={pattern}
+                          style={[
+                            styles.recurrenceButton,
+                            { borderColor: colors.tint },
+                            recurrencePattern === pattern && { backgroundColor: colors.tint },
+                          ]}
+                          onPress={() => setRecurrencePattern(pattern)}
+                        >
+                          <ThemedText style={[
+                            { color: recurrencePattern === pattern ? '#fff' : colors.tint },
+                            styles.recurrenceButtonText,
+                          ]}>
+                            {pattern.charAt(0).toUpperCase() + pattern.slice(1)}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <ThemedText style={styles.label}>Every (interval):</ThemedText>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                          color: colors.text,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      placeholder="e.g., 1 for every day, 2 for every other day"
+                      placeholderTextColor={colors.textSecondary}
+                      value={recurrenceInterval}
+                      onChangeText={setRecurrenceInterval}
+                      keyboardType="numeric"
+                    />
+
+                    <ThemedText style={styles.label}>End Date (optional):</ThemedText>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                          color: colors.text,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      placeholder="YYYY-MM-DD (leave empty for 1 year)"
+                      placeholderTextColor={colors.textSecondary}
+                      value={recurrenceEndDate}
+                      onChangeText={setRecurrenceEndDate}
+                    />
+                  </>
+                )}
               </View>
 
               <View style={styles.modalButtons}>
@@ -483,6 +595,20 @@ const styles = StyleSheet.create({
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
+  },
+  recurringBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  recurringText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
   flexibilityBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -496,6 +622,7 @@ const styles = StyleSheet.create({
   },
   taskDetails: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
   taskDetail: {
@@ -602,6 +729,35 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  recurringSection: {
+    marginTop: 8,
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  recurrenceButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  recurrenceButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  recurrenceButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

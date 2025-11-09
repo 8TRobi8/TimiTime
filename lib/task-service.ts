@@ -1,5 +1,33 @@
 import { supabase } from './supabase';
-import type { Task, TaskInsert, TaskUpdate } from './types';
+import type { Task, TaskInsert, TaskUpdate, RecurrencePattern } from './types';
+
+/**
+ * Calculate the next due date based on recurrence pattern and interval
+ */
+function getNextDueDate(
+  currentDate: Date,
+  pattern: RecurrencePattern,
+  interval: number
+): Date {
+  const nextDate = new Date(currentDate);
+  
+  switch (pattern) {
+    case 'daily':
+      nextDate.setDate(nextDate.getDate() + interval);
+      break;
+    case 'weekly':
+      nextDate.setDate(nextDate.getDate() + (interval * 7));
+      break;
+    case 'monthly':
+      nextDate.setMonth(nextDate.getMonth() + interval);
+      break;
+    case 'yearly':
+      nextDate.setFullYear(nextDate.getFullYear() + interval);
+      break;
+  }
+  
+  return nextDate;
+}
 
 export const taskService = {
   /**
@@ -55,7 +83,70 @@ export const taskService = {
       .single();
 
     if (error) throw error;
+    
+    // If it's a recurring task, create future instances
+    if (data.is_recurring && data.recurrence_pattern && data.recurrence_interval) {
+      await this.createRecurringInstances(data);
+    }
+    
     return data;
+  },
+
+  /**
+   * Create future instances of a recurring task
+   */
+  async createRecurringInstances(parentTask: Task): Promise<void> {
+    if (!parentTask.is_recurring || !parentTask.recurrence_pattern || !parentTask.recurrence_interval) {
+      return;
+    }
+
+    const instances: TaskInsert[] = [];
+    let currentDueDate = new Date(parentTask.due_date);
+    const endDate = parentTask.recurrence_end_date 
+      ? new Date(parentTask.recurrence_end_date)
+      : new Date(currentDueDate.getTime() + (365 * 24 * 60 * 60 * 1000)); // Default 1 year
+
+    // Generate up to 50 instances or until end date
+    for (let i = 0; i < 50; i++) {
+      currentDueDate = getNextDueDate(
+        currentDueDate,
+        parentTask.recurrence_pattern,
+        parentTask.recurrence_interval
+      );
+
+      if (currentDueDate > endDate) break;
+
+      instances.push({
+        title: parentTask.title,
+        duration: parentTask.duration,
+        due_date: currentDueDate.toISOString(),
+        flexibility: parentTask.flexibility,
+        completed: false,
+        is_recurring: false, // instances are not recurring themselves
+        parent_task_id: parentTask.id,
+      });
+    }
+
+    if (instances.length > 0) {
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Add user_id to all instances
+      const instancesWithUserId = instances.map(instance => ({
+        ...instance,
+        user_id: user.id,
+      }));
+
+      const { error } = await supabase
+        .from('tasks')
+        .insert(instancesWithUserId);
+
+      if (error) throw error;
+    }
   },
 
   /**
