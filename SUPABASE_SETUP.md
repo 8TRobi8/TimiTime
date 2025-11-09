@@ -104,6 +104,33 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 3. Check your email for verification (if enabled)
 4. Log in and create a test task
 
+## How Recurring Tasks Work
+
+### Creating a Recurring Task
+
+When you create a recurring task:
+1. Enable the "Recurring Task" toggle in the task creation modal
+2. Select a recurrence pattern (Daily, Weekly, Monthly, Yearly)
+3. Set the interval (e.g., 1 for every day, 2 for every other day)
+4. Optionally set an end date (defaults to 1 year if not specified)
+
+### Automatic Instance Generation
+
+When you save a recurring task:
+- The system automatically generates up to 50 future instances
+- Each instance is a separate task with its own due date
+- Instances are linked to the parent task via `parent_task_id`
+- Instances are created up to the end date or 1 year, whichever comes first
+
+### Example
+
+Create a task "Daily Standup" with:
+- Pattern: Daily
+- Interval: 1 (every day)
+- End date: 30 days from now
+
+Result: 30 task instances will be created, one for each day.
+
 ## Database Schema
 
 ### Tasks Table
@@ -130,6 +157,27 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 - Row Level Security (RLS) is enabled to ensure users can only access their own tasks
 - Authentication is required for all database operations
 - API keys are stored securely using expo-secure-store on native platforms
+
+## Migration Guide (For Existing Databases)
+
+If you already have a tasks table and need to add recurring task support, run this SQL:
+
+```sql
+-- Add new columns for recurring tasks
+alter table tasks
+  add column is_recurring boolean default false,
+  add column recurrence_pattern text,
+  add column recurrence_interval integer default 1,
+  add column recurrence_end_date timestamp with time zone,
+  add column parent_task_id uuid references tasks(id);
+
+-- Create indexes for the new columns
+create index tasks_parent_task_id_idx on tasks(parent_task_id);
+create index tasks_is_recurring_idx on tasks(is_recurring);
+
+-- Update existing tasks to have is_recurring = false (if not already set)
+update tasks set is_recurring = false where is_recurring is null;
+```
 
 ## Troubleshooting
 
