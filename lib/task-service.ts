@@ -35,9 +35,22 @@ export const taskService = {
    * Create a new task
    */
   async createTask(task: TaskInsert): Promise<Task> {
+    // Get the current user's ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Add user_id to the task
+    const taskWithUserId = {
+      ...task,
+      user_id: user.id,
+    };
+
     const { data, error } = await supabase
       .from('tasks')
-      .insert(task)
+      .insert(taskWithUserId)
       .select()
       .single();
 
