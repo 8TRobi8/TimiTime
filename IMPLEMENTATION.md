@@ -51,6 +51,7 @@ Successfully implemented a complete Supabase-integrated task management mobile a
 - "Find Tasks" button with duration filter
 - Quick filter buttons (5, 10, 15, 30, 60 minutes)
 - Create task modal with form
+- Edit task modal (accessible via long press)
 - Task cards showing:
   - Title
   - Duration
@@ -58,6 +59,7 @@ Successfully implemented a complete Supabase-integrated task management mobile a
   - Flexibility badge (color-coded)
   - Completion status
 - Tap to toggle completion
+- Long press to edit task
 - Empty state message
 - Loading states
 - Filter banner when filtered
@@ -128,10 +130,12 @@ Successfully implemented a complete Supabase-integrated task management mobile a
 
 2. ✅ **Task Management**
    - Create tasks with title, duration, due date, and flexibility (in days)
+   - Edit tasks via long press gesture
    - View all tasks sorted by due date
    - Filter tasks by available time
    - Toggle task completion
    - Visual feedback for completed tasks
+   - All task fields are editable (title, duration, due date, flexibility, color)
 
 3. ✅ **Smart Time Filtering**
    - "I have X minutes free" functionality
