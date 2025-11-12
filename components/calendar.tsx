@@ -143,7 +143,7 @@ export function Calendar({ tasks, currentDate, onPreviousMonth, onNextMonth }: C
                     return (
                       <View
                         key={task.id}
-                        style={[styles.taskDot, { backgroundColor: task.color }]}
+                        style={[styles.taskDot, { backgroundColor: task.color || '#007AFF' }]}
                       />
                     );
                   } else {
@@ -161,7 +161,7 @@ export function Calendar({ tasks, currentDate, onPreviousMonth, onNextMonth }: C
                         key={task.id}
                         style={[
                           styles.taskLine,
-                          { backgroundColor: task.color },
+                          { backgroundColor: task.color || '#007AFF' },
                           isStart && styles.taskLineStart,
                           isEnd && styles.taskLineEnd,
                         ]}
