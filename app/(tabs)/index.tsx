@@ -43,6 +43,10 @@ export default function TasksScreen() {
   const [dueDate, setDueDate] = useState('');
   const [flexibility, setFlexibility] = useState<number>(0);
   const [selectedColor, setSelectedColor] = useState('#007AFF');
+  
+  // Edit state
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -126,6 +130,48 @@ export default function TasksScreen() {
     }
   };
 
+  const handleLongPress = (task: Task) => {
+    setEditingTask(task);
+    setTitle(task.title);
+    setDuration(task.duration.toString());
+    setDueDate(task.due_date);
+    setFlexibility(task.flexibility);
+    setSelectedColor(task.color || '#007AFF');
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
+    
+    if (!title || !duration || !dueDate) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const durationNum = parseInt(duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration in minutes');
+      return;
+    }
+
+    try {
+      await taskService.updateTask(editingTask.id, {
+        title,
+        duration: durationNum,
+        due_date: dueDate,
+        flexibility,
+        color: selectedColor,
+      });
+      setEditModalVisible(false);
+      setEditingTask(null);
+      resetForm();
+      loadTasks();
+      Alert.alert('Success', 'Task updated successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update task');
+    }
+  };
+
   const resetForm = () => {
     setTitle('');
     setDuration('');
@@ -178,6 +224,7 @@ export default function TasksScreen() {
           item.completed && styles.taskCompleted,
         ]}
         onPress={() => handleToggleComplete(item)}
+        onLongPress={() => handleLongPress(item)}
       >
         <View style={styles.taskHeader}>
           <View style={styles.taskTitleRow}>
@@ -446,6 +493,139 @@ export default function TasksScreen() {
                 <ThemedText style={styles.modalButtonText}>Find Tasks</ThemedText>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Task Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#fff' }]}>
+            <ScrollView>
+              <ThemedText type="subtitle" style={styles.modalTitle}>
+                Edit Task
+              </ThemedText>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Task title"
+                placeholderTextColor={colors.textSecondary}
+                value={title}
+                onChangeText={setTitle}
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Duration (minutes)"
+                placeholderTextColor={colors.textSecondary}
+                value={duration}
+                onChangeText={setDuration}
+                keyboardType="numeric"
+              />
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Due date (YYYY-MM-DD)"
+                placeholderTextColor={colors.textSecondary}
+                value={dueDate}
+                onChangeText={setDueDate}
+              />
+
+              <ThemedText style={styles.label}>Flexibility (days):</ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f2f2f7',
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
+                placeholder="Days the task can be delayed (e.g., 0, 1, 2, 3)"
+                placeholderTextColor={colors.textSecondary}
+                value={flexibility.toString()}
+                onChangeText={(text) => setFlexibility(parseInt(text) || 0)}
+                keyboardType="numeric"
+              />
+
+              <View style={styles.quickFlexButtons}>
+                {[0, 1, 2, 3, 7].map((days) => (
+                  <TouchableOpacity
+                    key={days}
+                    style={[styles.quickFlexButton, { borderColor: colors.tint }]}
+                    onPress={() => setFlexibility(days)}
+                  >
+                    <ThemedText style={{ color: colors.tint }}>
+                      {days === 0 ? 'No flex' : `${days}d`}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <ThemedText style={styles.label}>Task Color:</ThemedText>
+              <View style={styles.colorPicker}>
+                {TASK_COLORS.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      selectedColor === color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setSelectedColor(color)}
+                  >
+                    {selectedColor === color && (
+                      <ThemedText style={styles.colorCheckmark}>✓</ThemedText>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => {
+                    setEditModalVisible(false);
+                    setEditingTask(null);
+                    resetForm();
+                  }}
+                >
+                  <ThemedText>Cancel</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: colors.tint }]}
+                  onPress={handleUpdateTask}
+                >
+                  <ThemedText style={styles.modalButtonText}>Update</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
