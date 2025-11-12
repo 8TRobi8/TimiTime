@@ -180,12 +180,15 @@ export default function TasksScreen() {
         onPress={() => handleToggleComplete(item)}
       >
         <View style={styles.taskHeader}>
-          <ThemedText
-            type="defaultSemiBold"
-            style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}
-          >
-            {item.title}
-          </ThemedText>
+          <View style={styles.taskTitleRow}>
+            <View style={[styles.taskColorDot, { backgroundColor: item.color || '#007AFF' }]} />
+            <ThemedText
+              type="defaultSemiBold"
+              style={[styles.taskTitle, item.completed && styles.taskTitleCompleted]}
+            >
+              {item.title}
+            </ThemedText>
+          </View>
           <View style={[styles.flexibilityBadge, { backgroundColor: urgencyColor }]}>
             <ThemedText style={styles.flexibilityText}>
               {item.flexibility === 0 ? 'No flex' : `+${item.flexibility}d`}
@@ -510,9 +513,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  taskTitle: {
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
     marginRight: 8,
+  },
+  taskColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  taskTitle: {
+    flex: 1,
   },
   taskTitleCompleted: {
     textDecorationLine: 'line-through',

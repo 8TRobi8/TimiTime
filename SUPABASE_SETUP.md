@@ -27,6 +27,7 @@ create table tasks (
   duration integer not null, -- duration in minutes
   due_date timestamp with time zone not null,
   flexibility integer not null default 0, -- days the task can be delayed
+  color text not null default '#007AFF', -- hex color for calendar visualization
   completed boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
@@ -109,9 +110,22 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 | duration | integer | Duration in minutes |
 | due_date | timestamp | When the task is due |
 | flexibility | integer | Days the task can be delayed (e.g., 0, 1, 2, 3) |
+| color | text | Hex color for calendar visualization (e.g., #007AFF) |
 | completed | boolean | Whether the task is completed |
 | created_at | timestamp | When the task was created |
 | updated_at | timestamp | When the task was last updated |
+
+## Migration: Adding Color Column
+
+If you already have an existing tasks table without the `color` column, run this migration:
+
+```sql
+-- Add color column to tasks table
+alter table tasks add column color text default '#007AFF';
+
+-- Update existing tasks to have a default color
+update tasks set color = '#007AFF' where color is null;
+```
 
 ## Security
 
