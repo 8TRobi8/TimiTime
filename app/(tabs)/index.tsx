@@ -17,6 +17,18 @@ import { Colors } from '@/constants/theme';
 import { taskService } from '@/lib/task-service';
 import type { Task, TaskInsert } from '@/lib/types';
 
+// Color palette for task selection
+const TASK_COLORS = [
+  '#007AFF', // Blue
+  '#34C759', // Green
+  '#FF3B30', // Red
+  '#FF9500', // Orange
+  '#AF52DE', // Purple
+  '#FF2D55', // Pink
+  '#5AC8FA', // Light Blue
+  '#FFCC00', // Yellow
+];
+
 export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +42,7 @@ export default function TasksScreen() {
   const [duration, setDuration] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [flexibility, setFlexibility] = useState<number>(0);
+  const [selectedColor, setSelectedColor] = useState('#007AFF');
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -90,6 +103,7 @@ export default function TasksScreen() {
         duration: durationNum,
         due_date: dueDate,
         flexibility,
+        color: selectedColor,
         completed: false,
       };
 
@@ -117,6 +131,7 @@ export default function TasksScreen() {
     setDuration('');
     setDueDate('');
     setFlexibility(0);
+    setSelectedColor('#007AFF');
   };
 
   const getTaskUrgencyColor = (task: Task) => {
@@ -325,6 +340,25 @@ export default function TasksScreen() {
                     <ThemedText style={{ color: colors.tint }}>
                       {days === 0 ? 'No flex' : `${days}d`}
                     </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <ThemedText style={styles.label}>Task Color:</ThemedText>
+              <View style={styles.colorPicker}>
+                {TASK_COLORS.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      selectedColor === color && styles.colorOptionSelected,
+                    ]}
+                    onPress={() => setSelectedColor(color)}
+                  >
+                    {selectedColor === color && (
+                      <ThemedText style={styles.colorCheckmark}>✓</ThemedText>
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -549,6 +583,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
+  },
+  colorPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  colorOption: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorOptionSelected: {
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  colorCheckmark: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   flexibilityButtons: {
     flexDirection: 'row',
